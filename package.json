@@ -1,0 +1,8 @@
+{
+  "name": "papa-ai-app-test",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Static site build not required'",
+    "build:azure": "echo 'Static site build not required'"
+  }
+}
