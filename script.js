@@ -6,7 +6,7 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const statusIndicator = document.getElementById('statusIndicator');
 
 // Configuración
-const API_URL = 'http://localhost:5000';
+const API_URL = '/api';
 let isLoading = false;
 
 // Event Listeners
@@ -55,7 +55,7 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error:', error);
         addMessage(
-            'Lo siento, ocurrió un error al conectar con el servidor. Asegúrate de que el backend está ejecutándose en http://localhost:5000',
+            'Lo siento, ocurrió un error al conectar con el servidor. Verifica que la API de Azure Static Web Apps esté disponible.',
             'bot',
             true
         );
