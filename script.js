@@ -155,3 +155,11 @@ window.addEventListener('load', async () => {
 messageInput.addEventListener('input', () => {
     // Aquí puedes agregar lógica para hacer crecer el input si lo deseas
 });
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+            console.error('Service Worker registration failed:', error);
+        });
+    });
+}
