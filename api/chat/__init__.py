@@ -3,7 +3,7 @@ import os
 
 import azure.functions as func
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import AzureOpenAI
 
 load_dotenv()
 
@@ -11,17 +11,9 @@ load_dotenv()
 def _normalize_endpoint(endpoint: str) -> str:
     endpoint = endpoint.strip().rstrip('/')
 
-    if 'services.ai.azure.com' in endpoint and '/api/projects/' in endpoint:
+    if '/api/projects/' in endpoint:
         resource_name = endpoint.split('//', 1)[1].split('.services.ai.azure.com', 1)[0]
-        return f'https://{resource_name}.openai.azure.com/openai/deployments/gpt-oss-120b?api-version=2024-10-21'
-
-    if 'openai.azure.com' in endpoint and '/openai/deployments/' not in endpoint:
-        if '/openai/v1' not in endpoint:
-            endpoint = f'{endpoint}/openai/v1'
-
-    if 'api-version=' not in endpoint:
-        separator = '&' if '?' in endpoint else '?'
-        endpoint = f'{endpoint}{separator}api-version=2024-10-21'
+        return f'https://{resource_name}.services.ai.azure.com'
 
     return endpoint
 
@@ -33,7 +25,11 @@ def _get_client():
     if not endpoint or not api_key:
         raise ValueError("Faltan las variables de entorno MY_ENDPOINT o MY_KEY. Configúralas en Azure Static Web Apps.")
 
-    return OpenAI(base_url=_normalize_endpoint(endpoint), api_key=api_key)
+    return AzureOpenAI(
+        azure_endpoint=_normalize_endpoint(endpoint),
+        api_key=api_key,
+        api_version='2024-10-21',
+    )
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -50,7 +46,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
         client = _get_client()
         completion = client.chat.completions.create(
-            model="gpt-oss-120b",
+            model=os.getenv('AZURE_OPENAI_DEPLOYMENT', 'gpt-oss-120b'),
             max_tokens=4000,
             temperature=1.0,
             top_p=1.0,
