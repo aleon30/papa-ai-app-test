@@ -8,6 +8,22 @@ from openai import OpenAI
 load_dotenv()
 
 
+def _normalize_endpoint(endpoint: str) -> str:
+    endpoint = endpoint.strip().rstrip('/')
+
+    if "/openai/v1" not in endpoint:
+        if "/api/projects/" in endpoint:
+            endpoint = endpoint.replace("/api/projects/", "/openai/v1/")
+        else:
+            endpoint = f"{endpoint}/openai/v1"
+
+    if "api-version=" not in endpoint:
+        separator = "&" if "?" in endpoint else "?"
+        endpoint = f"{endpoint}{separator}api-version=2024-10-21"
+
+    return endpoint
+
+
 def _get_client():
     endpoint = os.getenv("MY_ENDPOINT")
     api_key = os.getenv("MY_KEY")
@@ -17,7 +33,7 @@ def _get_client():
             "Faltan las variables de entorno MY_ENDPOINT o MY_KEY. Configúralas en Azure Static Web Apps."
         )
 
-    return OpenAI(base_url=endpoint, api_key=api_key)
+    return OpenAI(base_url=_normalize_endpoint(endpoint), api_key=api_key)
 
 
 def _json_response(status_code: int, payload: dict):
