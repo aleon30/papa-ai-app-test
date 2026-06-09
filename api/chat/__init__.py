@@ -11,15 +11,17 @@ load_dotenv()
 def _normalize_endpoint(endpoint: str) -> str:
     endpoint = endpoint.strip().rstrip('/')
 
-    if "/openai/v1" not in endpoint:
-        if "/api/projects/" in endpoint:
-            endpoint = endpoint.replace("/api/projects/", "/openai/v1/")
-        else:
-            endpoint = f"{endpoint}/openai/v1"
+    if 'services.ai.azure.com' in endpoint and '/api/projects/' in endpoint:
+        resource_name = endpoint.split('//', 1)[1].split('.services.ai.azure.com', 1)[0]
+        return f'https://{resource_name}.openai.azure.com/openai/deployments/gpt-oss-120b?api-version=2024-10-21'
 
-    if "api-version=" not in endpoint:
-        separator = "&" if "?" in endpoint else "?"
-        endpoint = f"{endpoint}{separator}api-version=2024-10-21"
+    if 'openai.azure.com' in endpoint and '/openai/deployments/' not in endpoint:
+        if '/openai/v1' not in endpoint:
+            endpoint = f'{endpoint}/openai/v1'
+
+    if 'api-version=' not in endpoint:
+        separator = '&' if '?' in endpoint else '?'
+        endpoint = f'{endpoint}{separator}api-version=2024-10-21'
 
     return endpoint
 
