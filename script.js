@@ -4,10 +4,16 @@ const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const statusIndicator = document.getElementById('statusIndicator');
+const authLabel = document.getElementById('authLabel');
+const loginLink = document.getElementById('loginLink');
+const logoutLink = document.getElementById('logoutLink');
 
 // Configuración
 const API_URL = '/api';
+const HISTORY_PREFIX = 'papita-ai-history';
 let isLoading = false;
+let currentUser = null;
+let currentHistory = [];
 
 // Event Listeners
 sendButton.addEventListener('click', sendMessage);
@@ -23,8 +29,17 @@ async function sendMessage() {
     
     if (!message || isLoading) return;
     
-    // Agregar mensaje del usuario
-    addMessage(message, 'user');
+    const userMessage = {
+        text: message,
+        sender: 'user',
+        isError: false,
+        time: new Date().toISOString()
+    };
+
+    currentHistory.push(userMessage);
+    saveHistory(currentHistory);
+
+    addMessage(userMessage.text, userMessage.sender, userMessage.isError, new Date(userMessage.time));
     messageInput.value = '';
     isLoading = true;
     
@@ -54,9 +69,17 @@ async function sendMessage() {
         }
 
         const botResponse = data.response;
-        
-        // Agregar respuesta del bot
-        addMessage(botResponse, 'bot');
+        const botMessage = {
+            text: botResponse,
+            sender: 'bot',
+            isError: false,
+            time: new Date().toISOString()
+        };
+
+        currentHistory.push(botMessage);
+        saveHistory(currentHistory);
+
+        addMessage(botMessage.text, botMessage.sender, botMessage.isError, new Date(botMessage.time));
         updateStatus(true);
         
     } catch (error) {
@@ -75,7 +98,7 @@ async function sendMessage() {
 }
 
 // Función para agregar mensaje al chat
-function addMessage(text, sender, isError = false) {
+function addMessage(text, sender, isError = false, time = new Date()) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message`;
     
@@ -87,7 +110,7 @@ function addMessage(text, sender, isError = false) {
     // Crear elemento de tiempo
     const timeDiv = document.createElement('div');
     timeDiv.className = 'message-time';
-    timeDiv.textContent = getFormattedTime();
+    timeDiv.textContent = getFormattedTime(time);
     
     if (isError) {
         contentDiv.style.backgroundColor = '#fee';
@@ -104,9 +127,8 @@ function addMessage(text, sender, isError = false) {
 }
 
 // Función para obtener la hora formateada
-function getFormattedTime() {
-    const now = new Date();
-    return now.toLocaleTimeString('es-ES', {
+function getFormattedTime(date = new Date()) {
+    return date.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -133,6 +155,57 @@ function updateStatus(isConnected) {
     }
 }
 
+function getHistoryKey() {
+    const userId = currentUser?.userId || currentUser?.user_id || currentUser?.userDetails || 'guest';
+    return `${HISTORY_PREFIX}:${userId}`;
+}
+
+function saveHistory(history) {
+    localStorage.setItem(getHistoryKey(), JSON.stringify(history));
+}
+
+function loadHistory() {
+    const savedHistory = JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
+    currentHistory = Array.isArray(savedHistory) ? savedHistory : [];
+
+    messagesContainer.innerHTML = '';
+
+    if (currentHistory.length > 0) {
+        currentHistory.forEach((message) => {
+            addMessage(message.text, message.sender, message.isError, new Date(message.time));
+        });
+    } else {
+        addMessage('¡Hola! Soy Papita, tu asistente de inteligencia artificial. Estoy aquí para ayudarte a detectar señales tempranas de burnout y apoyarte en tu bienestar. ¿Cómo te sientes hoy? 🥒', 'bot');
+    }
+}
+
+function updateAuthUi() {
+    if (currentUser) {
+        authLabel.textContent = `Hola, ${currentUser.userDetails || currentUser.userName || 'usuario'}`;
+        loginLink.style.display = 'none';
+        logoutLink.style.display = 'inline-flex';
+    } else {
+        authLabel.textContent = 'Invitado';
+        loginLink.style.display = 'inline-flex';
+        logoutLink.style.display = 'none';
+    }
+}
+
+async function loadAuthState() {
+    try {
+        const response = await fetch('/.auth/me');
+        if (!response.ok) throw new Error('No auth');
+        const data = await response.json();
+        const principal = Array.isArray(data) ? data[0] : data.clientPrincipal || null;
+        currentUser = principal || null;
+    } catch (error) {
+        currentUser = null;
+    }
+
+    updateAuthUi();
+    loadHistory();
+}
+
 // Verificar conexión al cargar
 window.addEventListener('load', async () => {
     try {
@@ -147,6 +220,8 @@ window.addEventListener('load', async () => {
         updateStatus(false);
     }
     
+    await loadAuthState();
+
     // Enfocar el input
     messageInput.focus();
 });
