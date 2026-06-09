@@ -40,12 +40,13 @@ async function sendMessage() {
             },
             body: JSON.stringify({ message: message })
         });
-        
+
+        const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
+            throw new Error(data.error || 'Error en la respuesta del servidor');
         }
-        
-        const data = await response.json();
+
         const botResponse = data.response;
         
         // Agregar respuesta del bot
@@ -55,7 +56,7 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error:', error);
         addMessage(
-            'Lo siento, ocurrió un error al conectar con el servidor. Verifica que la API de Azure Static Web Apps esté disponible.',
+            error.message || 'Lo siento, ocurrió un error al conectar con el servidor. Verifica que la API de Azure Static Web Apps esté disponible.',
             'bot',
             true
         );

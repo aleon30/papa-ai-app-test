@@ -7,10 +7,17 @@ from openai import OpenAI
 
 load_dotenv()
 
-client = OpenAI(
-    base_url=os.getenv("MY_ENDPOINT"),
-    api_key=os.getenv("MY_KEY"),
-)
+
+def _get_client():
+    endpoint = os.getenv("MY_ENDPOINT")
+    api_key = os.getenv("MY_KEY")
+
+    if not endpoint or not api_key:
+        raise ValueError(
+            "Faltan las variables de entorno MY_ENDPOINT o MY_KEY. Configúralas en Azure Static Web Apps."
+        )
+
+    return OpenAI(base_url=endpoint, api_key=api_key)
 
 
 def _json_response(status_code: int, payload: dict):
@@ -40,6 +47,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             if not user_message.strip():
                 return _json_response(400, {"error": "Mensaje vacío"})
 
+            client = _get_client()
             completion = client.chat.completions.create(
                 model="gpt-oss-120b",
                 max_tokens=4000,
