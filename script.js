@@ -41,10 +41,16 @@ async function sendMessage() {
             body: JSON.stringify({ message: message })
         });
 
-        const data = await response.json().catch(() => ({}));
+        const text = await response.text();
+        let data = {};
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (e) {
+            data = {};
+        }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Error en la respuesta del servidor');
+            throw new Error((data.error || text || 'Error en la respuesta del servidor') + ` (HTTP ${response.status})`);
         }
 
         const botResponse = data.response;
