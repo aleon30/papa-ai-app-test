@@ -3,10 +3,11 @@ const messagesContainer = document.getElementById('messagesContainer');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const loadingIndicator = document.getElementById('loadingIndicator');
-const statusIndicator = document.getElementById('statusIndicator');
+const chatDrawer = document.getElementById('chatDrawer');
+const closeChatButton = document.getElementById('closeChatButton');
 
 // Configuración
-const API_URL = '/api';
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:7071/api' : '/api';
 const HISTORY_PREFIX = 'papita-ai-history';
 let isLoading = false;
 let currentUser = null;
@@ -14,11 +15,22 @@ let currentHistory = [];
 
 // Event Listeners
 sendButton.addEventListener('click', sendMessage);
+closeChatButton.addEventListener('click', closeChatDrawer);
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !isLoading) {
         sendMessage();
     }
 });
+
+function openChatDrawer() {
+    chatDrawer.classList.add('open');
+    chatDrawer.setAttribute('aria-hidden', 'false');
+}
+
+function closeChatDrawer() {
+    chatDrawer.classList.remove('open');
+    chatDrawer.setAttribute('aria-hidden', 'true');
+}
 
 // Función para enviar mensaje
 async function sendMessage() {
@@ -36,6 +48,7 @@ async function sendMessage() {
     currentHistory.push(userMessage);
     saveHistory(currentHistory);
 
+    openChatDrawer();
     addMessage(userMessage.text, userMessage.sender, userMessage.isError, new Date(userMessage.time));
     messageInput.value = '';
     isLoading = true;
@@ -77,8 +90,7 @@ async function sendMessage() {
         saveHistory(currentHistory);
 
         addMessage(botMessage.text, botMessage.sender, botMessage.isError, new Date(botMessage.time));
-        updateStatus(true);
-        
+
     } catch (error) {
         console.error('Error:', error);
         addMessage(
@@ -86,7 +98,6 @@ async function sendMessage() {
             'bot',
             true
         );
-        updateStatus(false);
     } finally {
         isLoading = false;
         loadingIndicator.classList.remove('active');
@@ -138,19 +149,6 @@ function scrollToBottom() {
     }, 0);
 }
 
-// Función para actualizar estado de conexión
-function updateStatus(isConnected) {
-    const statusDot = statusIndicator.querySelector('.status-dot');
-    const statusText = statusIndicator.querySelector('.status-text');
-    
-    if (isConnected) {
-        statusDot.style.background = '#4ade80';
-        statusText.textContent = 'Conectado';
-    } else {
-        statusDot.style.background = '#ef4444';
-        statusText.textContent = 'Error de conexión';
-    }
-}
 
 function getHistoryKey() {
     const userId = currentUser?.userId || currentUser?.user_id || currentUser?.userDetails || 'guest';
@@ -174,25 +172,13 @@ function loadHistory() {
     } else {
         addMessage('¡Hola! Soy Papita, tu asistente de inteligencia artificial. Estoy aquí para ayudarte a detectar señales tempranas de burnout y apoyarte en tu bienestar. ¿Cómo te sientes hoy? 🥒', 'bot');
     }
+
+    if (currentHistory.length > 0) {
+        openChatDrawer();
+    }
 }
 
-// Verificar conexión al cargar
-window.addEventListener('load', async () => {
-    try {
-        const response = await fetch(`${API_URL}/health`);
-        if (response.ok) {
-            updateStatus(true);
-        } else {
-            updateStatus(false);
-        }
-    } catch (error) {
-        console.error('Error al conectar con el servidor:', error);
-        updateStatus(false);
-    }
-    
-    await loadAuthState();
-
-    // Enfocar el input
+window.addEventListener('load', () => {
     messageInput.focus();
 });
 
