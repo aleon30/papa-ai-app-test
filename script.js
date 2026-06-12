@@ -4,9 +4,6 @@ const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const statusIndicator = document.getElementById('statusIndicator');
-const authLabel = document.getElementById('authLabel');
-const loginLink = document.getElementById('loginLink');
-const logoutLink = document.getElementById('logoutLink');
 
 // Configuración
 const API_URL = '/api';
@@ -177,33 +174,6 @@ function loadHistory() {
     } else {
         addMessage('¡Hola! Soy Papita, tu asistente de inteligencia artificial. Estoy aquí para ayudarte a detectar señales tempranas de burnout y apoyarte en tu bienestar. ¿Cómo te sientes hoy? 🥒', 'bot');
     }
-}
-
-function updateAuthUi() {
-    if (currentUser) {
-        authLabel.textContent = `Hola, ${currentUser.userDetails || currentUser.userName || 'usuario'}`;
-        loginLink.style.display = 'none';
-        logoutLink.style.display = 'inline-flex';
-    } else {
-        authLabel.textContent = 'Invitado';
-        loginLink.style.display = 'inline-flex';
-        logoutLink.style.display = 'none';
-    }
-}
-
-async function loadAuthState() {
-    try {
-        const response = await fetch('/.auth/me');
-        if (!response.ok) throw new Error('No auth');
-        const data = await response.json();
-        const principal = Array.isArray(data) ? data[0] : data.clientPrincipal || null;
-        currentUser = principal || null;
-    } catch (error) {
-        currentUser = null;
-    }
-
-    updateAuthUi();
-    loadHistory();
 }
 
 // Verificar conexión al cargar
