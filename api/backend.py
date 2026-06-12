@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from openai import OpenAI
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
 
 load_dotenv()
 
@@ -14,6 +16,25 @@ client = OpenAI(
     api_key=os.getenv("MY_KEY")
 )
 
+# Upload the training and validation dataset files to Microsoft Foundry with the SDK.
+training_file_name = 'training_set.jsonl'
+validation_file_name = 'validation_set.jsonl'
+
+training_response = client.files.create(file=open(training_file_name, "rb"), purpose="fine-tune")
+validation_response = client.files.create(file=open(validation_file_name, "rb"), purpose="fine-tune")
+training_file_id = training_response.id
+validation_file_id = validation_response.id
+
+service_endpoint = os.getenv("MY_ENDPOINT")
+index_name = os.environ["AZURE_SEARCH_INDEX_NAME"]
+key = os.getenv("MY_KEY")
+
+search_client = SearchClient(service_endpoint, index_name, AzureKeyCredential(key))
+
+def buscar_contexto(query):
+    
+    return "Contenido recuperado de tus manuales de salud mental..."
+
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
@@ -24,13 +45,16 @@ def chat():
             return jsonify({'error': 'Mensaje vacío'}), 400
         
         completion = client.chat.completions.create(
+            training_file=training_file_id,
+            validation_file=validation_file_id,
             model="gpt-oss-120b",
             max_tokens=4000,
-            temperature=1.0,
+            temperature=0.7,
             top_p=1.0,
             stop=[],
             presence_penalty=0.0,
             frequency_penalty=0.0,
+            extra_body={ "trainingType": "GlobalStandard" },
             messages=[
                 {
                     "role": "system",
